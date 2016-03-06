@@ -13,15 +13,16 @@ const int PUMP_OFF_TIME = 4000;
 
 Servo arm;
 int arm_pos = 0;
-int state_change_counter = 0;
 
-int next_led_state_time = 0;
-int next_pump_state_time = 0;
+unsigned long next_led_state_time = 0;
+unsigned long next_pump_state_time = 0;
 bool left_on = true;
-int currentTime;
-int left_side_on_time;
-int right_side_on_time;
-int individual_flash_time = 0;
+unsigned long currentTime;
+unsigned long left_side_on_time;
+unsigned long right_side_on_time;
+unsigned long individual_flash_time = 0;
+unsigned long flashing_stop_time = 0;
+
 bool flash_left = false;
 bool toggle_lights = false;
 
@@ -60,14 +61,12 @@ void setup() {
 // the loop function runs over and over again forever
 void loop() {
 
-  Serial.println(String(currentPumpState) + " - " + String(currentLEDState) + " - " + state_change_counter);
-  
   currentTime = millis();
 
   // pump state machine
   switch (currentPumpState) {
     case PUMP_INIT:
-      next_pump_state_time = millis() + PUMP_ON_TIME;
+      next_pump_state_time = currentTime + PUMP_ON_TIME;
       currentPumpState = PUMPING;
       break;
     case PUMPING:
@@ -77,7 +76,6 @@ void loop() {
         toggle_lights = true;
         Pump(false);
         arm.write(135);
-        state_change_counter++;
       }
       break;
     case RESTING:
@@ -87,7 +85,6 @@ void loop() {
         toggle_lights = true;
         Pump(true);
         arm.write(45);        
-        state_change_counter++;
       }
       break;
   }
@@ -96,15 +93,19 @@ void loop() {
   switch (currentLEDState) {
     case LED_INIT:
       currentLEDState = FLASHING;
-      next_led_state_time = millis() + FLASH_STATE_DURATION;
+      next_led_state_time = currentTime + FLASH_STATE_DURATION;
       individual_flash_time = 0;
       break;
     case FLASHING:
+      if (currentTime > next_led_state_time) {
+        currentLEDState = SINGLE_SIDE_ON;
+        break;
+      }
       if (currentTime > individual_flash_time) {
         flash_left = !flash_left;
         Left_LED(flash_left);
         Right_LED(!flash_left);
-        individual_flash_time = millis() + FLASH_DELAY;
+        individual_flash_time = currentTime + FLASH_DELAY;
       }
       break;
       
@@ -114,7 +115,8 @@ void loop() {
       if (toggle_lights) {
         currentLEDState = FLASHING;
         left_on = !left_on;
-        individual_flash_time = millis() + FLASH_DELAY;
+        next_led_state_time = currentTime + FLASH_STATE_DURATION;
+        individual_flash_time = currentTime + FLASH_DELAY;
         toggle_lights = false;
       }
       break;
