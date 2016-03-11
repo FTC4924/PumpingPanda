@@ -1,7 +1,7 @@
 #include <Servo.h>
 
 const int LEFT_LED = 13;
-const int RIGHT_LED = 12;
+const int RIGHT_LED = 11;
 const int PUMP = 8;
 const int SERVO_PIN = 3;
 
